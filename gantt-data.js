@@ -1,4 +1,10 @@
+var gObserversCollection = null,
+    gEventsCollection = null;
+
 gantt.meteor = function(collections) {
+    gObserversCollection = new DataCollection();
+    gEventsCollection = new DataCollection();
+
     var collectionsCursors = {
         tasks: null,
         links: null
@@ -18,26 +24,47 @@ gantt.meteor = function(collections) {
 
 };
 
+gantt.meteorStop = function() {
+    if(gObserversCollection) {
+        gObserversCollection.each(function(observer) {
+            observer.stop();
+        });
+    }
+
+    var self = this;
+    if(gEventsCollection) {
+        gEventsCollection.each(function(eventId) {
+            self.detachEvent(eventId);
+        });
+        gEventsCollection.clean();
+    }
+};
+
 function initCollectionHandler(gantt, collection, collectionCursor, itemType) {
     var itemTypeSettings = getItemTypeSettings(gantt, itemType),
         eventsNames = itemTypeSettings.events_names;
 
     var collectionHandlerObj = new CollectionHandler(collection);
 
-    gantt.attachEvent(eventsNames.added, function(itemId, item) {
-        collectionHandlerObj.save(item);
-    });
+    gEventsCollection.add(gantt.attachEvent("onTaskLoading", function(task) {
+        collectionHandlerObj.save(task);
+        return true;
+    }));
 
-    gantt.attachEvent(eventsNames.updated, function(itemId, item) {
+    gEventsCollection.add(gantt.attachEvent(eventsNames.added, function(itemId, item) {
         collectionHandlerObj.save(item);
-    });
+    }));
 
-    gantt.attachEvent(eventsNames.removed, function(itemId) {
+    gEventsCollection.add(gantt.attachEvent(eventsNames.updated, function(itemId, item) {
+        collectionHandlerObj.save(item);
+    }));
+
+    gEventsCollection.add(gantt.attachEvent(eventsNames.removed, function(itemId) {
         collectionHandlerObj.remove(itemId);
-    });
+    }));
 
     var methods = itemTypeSettings.methods;
-    collectionCursor.observe({
+    gObserversCollection.add(collectionCursor.observe({
 
         added: function(data) {
             var itemData = parseItemData(data);
@@ -64,7 +91,7 @@ function initCollectionHandler(gantt, collection, collectionCursor, itemType) {
                 methods.remove(data.id);
         }
 
-    });
+    }));
 
 }
 
@@ -152,4 +179,28 @@ function parseItemData(item) {
     }
 
     return itemData;
+}
+
+function DataCollection() {
+    var collectionData = {},
+        currentUid = new Date().valueOf();
+
+    function _uid() {
+        return currentUid++;
+    }
+
+    this.add = function(data) {
+        var dataId = _uid();
+        collectionData[dataId] = data;
+        return dataId;
+    };
+
+    this.each = function(handler) {
+        for(var key in collectionData)
+            handler.call(this, collectionData[key]);
+    };
+
+    this.clean = function() {
+        collectionData = {};
+    };
 }

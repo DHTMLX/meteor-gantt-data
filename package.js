@@ -1,6 +1,6 @@
 Package.describe({
   name: "dhtmlx:gantt-data",
-  version: "0.0.1",
+  version: "0.0.2",
   // Brief, one-line summary of the package.
   summary: "Meteor data adapter for dhtmlxGantt.",
   // URL to the Git repository containing the source code for this package.
@@ -15,8 +15,9 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom("1.1.0.2");
-  api.use("dhtmlx:gantt", "client");
+  api.use("dhtmlx:gantt@0.0.1", "client");
   api.addFiles("gantt-data.js", "client");
+  api.export("gantt", "client");
 });
 
 Package.onTest(function(api) {

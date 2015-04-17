@@ -42,6 +42,11 @@ How to use
 	});
     ```
 
+- Stop the data adapter:
+    ```js
+	gantt.meteorStop();
+    ```
+
 That is it.
 
 License
