@@ -1,7 +1,7 @@
 var gObserversCollection = null,
     gEventsCollection = null;
 
-gantt.meteor = function(collections) {
+function meteorStart(collections) {
     gObserversCollection = new DataCollection();
     gEventsCollection = new DataCollection();
 
@@ -24,7 +24,7 @@ gantt.meteor = function(collections) {
 
 };
 
-gantt.meteorStop = function() {
+function meteorStop() {
     if(gObserversCollection) {
         gObserversCollection.each(function(observer) {
             observer.stop();
@@ -204,3 +204,18 @@ function DataCollection() {
         collectionData = {};
     };
 }
+
+
+
+function initGanttMeteor(gantt) {
+    gantt.meteor = meteorStart;
+    gantt.meteorStop = meteorStop;
+}
+
+if(window.Gantt) {
+    Gantt.plugin(function(gantt) {
+        initGanttMeteor(gantt);
+    });
+}
+else
+    initGanttMeteor(gantt);
