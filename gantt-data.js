@@ -22,7 +22,7 @@ function meteorStart(collections) {
     initCollectionHandler(this, collections["tasks"], collectionsCursors["tasks"], "task");
     initCollectionHandler(this, collections["links"], collectionsCursors["links"], "link");
 
-};
+}
 
 function meteorStop() {
     if(gObserversCollection) {
@@ -38,14 +38,13 @@ function meteorStop() {
         });
         gEventsCollection.clean();
     }
-};
+}
 
 function initCollectionHandler(gantt, collection, collectionCursor, itemType) {
     var itemTypeSettings = getItemTypeSettings(gantt, itemType),
         eventsNames = itemTypeSettings.events_names;
 
     var collectionHandlerObj = new CollectionHandler(collection);
-
     gEventsCollection.add(gantt.attachEvent("onTaskLoading", function(task) {
         collectionHandlerObj.save(task);
         return true;
@@ -147,7 +146,7 @@ function CollectionHandler(collection) {
 
     this.save = function(item) {
         item = parseItemData(item);
-
+        item.projectId = Session.get('projectId');
         var savedItemData = this.findItem(item.id);
         if(savedItemData)
             collection.update({_id: savedItemData._id}, {$set:item});
