@@ -11,10 +11,12 @@ function meteorStart(collections) {
     };
 
     if(arguments.length == 2) {
+        console.log('arguments length = 2')
         collectionsCursors = arguments[0];
         collections = arguments[1];
     }
     else {
+        console.log('else statement');
         collectionsCursors["tasks"] = collections["tasks"].find();
         collectionsCursors["links"] = collections["links"].find();
     }
@@ -148,8 +150,15 @@ function CollectionHandler(collection) {
         item = parseItemData(item);
         item.projectId = Session.get('projectId');
         var savedItemData = this.findItem(item.id);
-        if(savedItemData)
-            collection.update({_id: savedItemData._id}, {$set:item});
+        if(savedItemData){
+            delete item._id;
+            collection.update({_id: savedItemData._id}, {$set:{
+                text:item.text,
+                start_date:item.start_date,
+                end_date:item.end_date,
+                duration:item.duration
+            }});
+        }
         else
             collection.insert(item);
     };
@@ -161,6 +170,7 @@ function CollectionHandler(collection) {
     };
 
     this.findItem = function(itemId) {
+        console.log('find item');
         return collection.findOne({id: itemId});
     };
 }
