@@ -22,9 +22,11 @@ function meteorStart(collections) {
     initCollectionHandler(this, collections["tasks"], collectionsCursors["tasks"], "task");
     initCollectionHandler(this, collections["links"], collectionsCursors["links"], "link");
 
-};
+}
 
 function meteorStop() {
+    gantt.clearAll();
+
     if(gObserversCollection) {
         gObserversCollection.each(function(observer) {
             observer.stop();
@@ -38,28 +40,31 @@ function meteorStop() {
         });
         gEventsCollection.clean();
     }
-};
+}
 
 function initCollectionHandler(gantt, collection, collectionCursor, itemType) {
     var itemTypeSettings = getItemTypeSettings(gantt, itemType),
         eventsNames = itemTypeSettings.events_names;
 
     var collectionHandlerObj = new CollectionHandler(collection);
-
     gEventsCollection.add(gantt.attachEvent("onTaskLoading", function(task) {
-        collectionHandlerObj.save(task);
+        //collectionHandlerObj.save(task);
+        console.log('loading');
         return true;
     }));
 
     gEventsCollection.add(gantt.attachEvent(eventsNames.added, function(itemId, item) {
+        console.log('adding');
         collectionHandlerObj.save(item);
     }));
 
     gEventsCollection.add(gantt.attachEvent(eventsNames.updated, function(itemId, item) {
+        console.log('updating');
         collectionHandlerObj.save(item);
     }));
 
     gEventsCollection.add(gantt.attachEvent(eventsNames.removed, function(itemId) {
+        console.log('removing');
         collectionHandlerObj.remove(itemId);
     }));
 
@@ -68,30 +73,32 @@ function initCollectionHandler(gantt, collection, collectionCursor, itemType) {
 
         added: function(data) {
             var itemData = parseItemData(data);
-            if(!methods.isExists(itemData.id))
+            gantt.render();
+            if(!methods.isExists(itemData._id))
                 methods.add(itemData);
         },
 
         changed: function(data) {
             var itemData = parseItemData(data);
 
-            if(!methods.isExists(itemData.id))
+            if(!methods.isExists(itemData._id))
                 return false;
 
-            var item = methods.get(itemData.id);
+            var item = methods.get(itemData._id);
             for(var key in itemData)
                 item[key] = itemData[key];
 
-            methods.update(itemData.id);
+            methods.update(itemData._id);
             return true;
         },
 
         removed: function(data) {
-            if(methods.isExists(data.id))
-                methods.remove(data.id);
+            if(methods.isExists(data._id))
+                methods.remove(data._id);
         }
 
-    }));
+    })
+    );
 
 }
 
@@ -147,10 +154,29 @@ function CollectionHandler(collection) {
 
     this.save = function(item) {
         item = parseItemData(item);
+        item.projectId = Session.get('projectId');
+        var savedItemData = this.findItem(item._id);
 
-        var savedItemData = this.findItem(item.id);
-        if(savedItemData)
-            collection.update({_id: savedItemData._id}, item);
+
+        if(savedItemData){
+            if (item.hasOwnProperty("text")) {
+                collection.update({_id: savedItemData._id}, {
+                    $set: {
+                        text: item.text,
+                        start_date: item.start_date,
+                        end_date: item.end_date,
+                        duration: item.duration
+                    }
+                });
+            } else {
+                collection.update({_id: savedItemData._id}, {
+                    $set: {
+                        source: item.source,
+                        target: item.target
+                    }
+                });
+            }
+        }
         else
             collection.insert(item);
     };
@@ -162,20 +188,22 @@ function CollectionHandler(collection) {
     };
 
     this.findItem = function(itemId) {
-        return collection.findOne({id: itemId});
+        return collection.findOne({_id: itemId});
     };
 }
 
 function parseItemData(item) {
     var itemData = {};
     for(var itemProperty in item) {
-        if((itemProperty == "_id") || (itemProperty.charAt(0) == "$"))
+
+        // can't imagine what this is
+        if((itemProperty.charAt(0) == "$"))
             continue;
 
         itemData[itemProperty] = item[itemProperty];
 
-        if(itemProperty == "id")
-            itemData[itemProperty] = itemData[itemProperty].toString();
+        if(itemProperty == "_id")
+            itemData["id"] = itemData[itemProperty].toString();
     }
 
     return itemData;
@@ -196,8 +224,9 @@ function DataCollection() {
     };
 
     this.each = function(handler) {
-        for(var key in collectionData)
+        for(var key in collectionData) {
             handler.call(this, collectionData[key]);
+        }
     };
 
     this.clean = function() {
