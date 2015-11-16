@@ -150,7 +150,7 @@ function CollectionHandler(collection) {
 
         var savedItemData = this.findItem(item.id);
         if(savedItemData)
-            collection.update({_id: savedItemData._id}, item);
+            collection.update({_id: savedItemData._id}, { $set: item});
         else
             collection.insert(item);
     };
